@@ -20,7 +20,9 @@ app.get('/stream', (req, res) => {
 
   stream.on('response', (resp) => {
     console.log(`Stream response: ${resp.statusCode}, Content-Type: ${resp.headers['content-type']}`);
-    let contentType = resp.headers['content-type']?.toLowerCase() || 'audio/mpeg';
+    // Replace optional chaining with explicit check
+    const rawContentType = resp.headers['content-type'];
+    let contentType = rawContentType ? rawContentType.toLowerCase() : 'audio/mpeg';
     if (streamUrl.endsWith('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
     else if (streamUrl.endsWith('.aac')) contentType = 'audio/aac';
     else if (streamUrl.endsWith('.mp3')) contentType = 'audio/mpeg';
