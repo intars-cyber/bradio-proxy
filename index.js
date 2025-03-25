@@ -2,16 +2,20 @@ const express = require('express');
 const request = require('request');
 const app = express();
 
+app.get('/', (req, res) => {
+  res.redirect(302, 'https://bradio.dev');
+});
+
 app.get('/stream', (req, res) => {
   const streamUrl = req.query.url;
-  if (!streamUrl) return res.status(400).send('Missing stream URL');
+  if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
 
   console.log(`Requesting stream: ${streamUrl}`);
   const stream = request({
     url: streamUrl,
     headers: { 'User-Agent': 'BRadio-App' },
     followRedirect: true,
-    timeout: 5000 // 5s to avoid Glitch timeout
+    timeout: 5000
   });
 
   stream.on('response', (resp) => {
