@@ -1,7 +1,7 @@
 {
   "name": "bradio-vercel-proxy",
   "version": "1.0.0",
-  "description": "A proxy service for bradio",
+  "description": "A proxy service for bradio.dev",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -11,5 +11,14 @@
   },
   "engines": {
     "node": ">=14.0.0"
+  },
+  "vercel": {
+    "version": 2,
+    "builds": [
+      {
+        "src": "index.js",
+        "use": "@vercel/node"
+      }
+    ]
   }
 }
