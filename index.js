@@ -1,6 +1,8 @@
+const express = require('express');
 const request = require('request');
+const app = express();
 
-module.exports = (req, res) => {
+app.get('/stream', (req, res) => {
   const streamUrl = req.query.url;
   if (!streamUrl) return res.status(400).send('Missing stream URL');
   request({ url: streamUrl, headers: { 'User-Agent': 'BRadio-App' }, followRedirect: true, timeout: 10000 })
@@ -17,4 +19,7 @@ module.exports = (req, res) => {
     })
     .on('error', (err) => res.status(500).send(`Stream error: ${err.message}`))
     .pipe(res);
-};
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
