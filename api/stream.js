@@ -1,8 +1,8 @@
 const request = require('request');
 
 module.exports = (req, res) => {
-  // Handle streaming requests
-  if (req.url.startsWith('/api/stream') && req.query.url) {
+  // Check if this is a streaming request with a URL
+  if (req.query.url) {
     console.log(`Requesting stream: ${req.query.url}`);
     const stream = request({
       url: req.query.url,
@@ -31,8 +31,10 @@ module.exports = (req, res) => {
     return;
   }
 
-  // Redirect all other requests to bradio.dev
-  res.statusCode = 302;
-  res.setHeader('Location', 'https://bradio.dev');
+  // For all other requests, redirect to bradio.dev
+  console.log(`Redirecting to bradio.dev from path: ${req.url}`);
+  res.writeHead(302, {
+    'Location': 'https://bradio.dev'
+  });
   res.end();
 };
