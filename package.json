@@ -1,6 +1,7 @@
 {
   "name": "bradio-proxy",
   "version": "1.0.0",
+  "description": "A proxy service for bradio.dev",
   "scripts": {
     "start": "node index.js"
   },
