@@ -2,8 +2,13 @@ const express = require('express');
 const request = require('request');
 const app = express();
 
-app.get('/', (req, res) => {
-  res.redirect(302, 'https://bradio.dev');
+// Handle all routes that are not explicitly defined
+app.use((req, res, next) => {
+  if (req.path === '/stream') {
+    next(); // Continue to stream handler if it's a stream request
+  } else {
+    res.redirect(302, 'https://bradio.dev');
+  }
 });
 
 app.get('/stream', (req, res) => {
