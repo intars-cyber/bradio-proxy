@@ -2,13 +2,17 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/*.js",
+      "src": "api/stream.js",
       "use": "@vercel/node@2.15.10"
     }
   ],
   "routes": [
     {
       "src": "/api/stream",
+      "dest": "/api/stream.js"
+    },
+    {
+      "src": "/(.*)",
       "dest": "/api/stream.js"
     }
   ]
