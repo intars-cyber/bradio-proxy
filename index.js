@@ -13,7 +13,6 @@ app.get('/proxy/stream', (req, res) => {
   let streamUrl = req.query.url;
   if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
 
-  // Ensure protocol
   if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
   console.log(`Requesting stream: ${streamUrl}`);
@@ -50,5 +49,6 @@ app.get('/', (req, res) => {
   res.send('BRadio Proxy Running - Use /proxy/stream');
 });
 
+// Use process.env.PORT for Koyeb (set to 8000 internally)
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server running on port ${port}`));
