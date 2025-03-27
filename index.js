@@ -2,22 +2,19 @@ const express = require('express');
 const request = require('request');
 const app = express();
 
-app.use((req, res, next) => {
-  if (req.path === '/stream') {
-    next();
-  } else {
-    res.redirect(302, 'https://bradio.dev');
-  }
+// Middleware for /proxy subpath
+app.use('/proxy', (req, res, next) => {
+  if (req.path === '/stream') next();
+  else res.redirect(302, 'https://bradio.dev');
 });
 
-app.get('/stream', (req, res) => {
+// Stream endpoint at /proxy/stream
+app.get('/proxy/stream', (req, res) => {
   let streamUrl = req.query.url;
   if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
 
-  // Ensure protocol is present
-  if (!streamUrl.match(/^https?:\/\//)) {
-    streamUrl = `https://${streamUrl}`;
-  }
+  // Ensure protocol
+  if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
   console.log(`Requesting stream: ${streamUrl}`);
   const stream = request({
@@ -46,6 +43,11 @@ app.get('/stream', (req, res) => {
     console.error(`Stream error: ${err.message}`);
     res.status(500).send(`Stream error: ${err.message}`);
   });
+});
+
+// Root fallback
+app.get('/', (req, res) => {
+  res.send('BRadio Proxy Running - Use /proxy/stream');
 });
 
 const port = process.env.PORT || 3000;
