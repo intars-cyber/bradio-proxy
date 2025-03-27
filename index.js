@@ -2,18 +2,22 @@ const express = require('express');
 const request = require('request');
 const app = express();
 
-// Handle all routes that are not explicitly defined
 app.use((req, res, next) => {
   if (req.path === '/stream') {
-    next(); // Continue to stream handler if it's a stream request
+    next();
   } else {
     res.redirect(302, 'https://bradio.dev');
   }
 });
 
 app.get('/stream', (req, res) => {
-  const streamUrl = req.query.url;
+  let streamUrl = req.query.url;
   if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
+
+  // Ensure protocol is present
+  if (!streamUrl.match(/^https?:\/\//)) {
+    streamUrl = `https://${streamUrl}`;
+  }
 
   console.log(`Requesting stream: ${streamUrl}`);
   const stream = request({
@@ -25,7 +29,6 @@ app.get('/stream', (req, res) => {
 
   stream.on('response', (resp) => {
     console.log(`Stream response: ${resp.statusCode}, Content-Type: ${resp.headers['content-type']}`);
-    // Replace optional chaining with explicit check
     const rawContentType = resp.headers['content-type'];
     let contentType = rawContentType ? rawContentType.toLowerCase() : 'audio/mpeg';
     if (streamUrl.endsWith('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
