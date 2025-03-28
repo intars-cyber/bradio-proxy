@@ -23,7 +23,8 @@ module.exports = async (req, res) => {
     try {
       const response = await fetch(streamUrl, {
         headers: { 'User-Agent': 'BRadio-App' },
-        redirect: 'follow'
+        redirect: 'follow',
+        signal: AbortSignal.timeout(55000) // 55s, under 60s limit
       });
 
       if (!response.ok) {
