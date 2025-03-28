@@ -4,7 +4,7 @@ const app = express();
 
 app.get('/stream', (req, res) => {
   let streamUrl = req.query.url;
-  if (!streamUrl) return res.status(400).send('No stream URL provided');
+  if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
 
   if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
@@ -36,7 +36,7 @@ app.get('/stream', (req, res) => {
 
 app.get('/', (req, res) => {
   console.log('Root endpoint hit');
-  res.send('BRadio Proxy Running - Use /stream?url=<stream-url>');
+  res.redirect(302, 'https://bradio.dev');
 });
 
 const port = process.env.PORT || 3000;
