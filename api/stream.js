@@ -1,6 +1,4 @@
-const request = require('request');
-
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   console.log(`Request received: ${req.url}`);
   const url = new URL(`http://localhost${req.url}`);
   if (url.pathname === '/api/stream') {
@@ -20,24 +18,33 @@ module.exports = (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const stream = request({
-      url: streamUrl,
-      headers: { 'User-Agent': 'BRadio-App' },
-      followRedirect: true,
-      timeout: 5000
-    });
+    try {
+      const response = await fetch(streamUrl, {
+        headers: { 'User-Agent': 'BRadio-App' },
+        redirect: 'follow'
+      });
 
-    stream.on('response', (resp) => {
-      console.log(`Stream response: ${resp.statusCode}, Content-Type: ${resp.headers['content-type']}`);
-      console.log('Piping stream to response');
-      stream.pipe(res, { end: true });
-    });
+      console.log(`Stream response: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
+      if (!response.ok) throw new Error(`Upstream returned ${response.status}`);
 
-    stream.on('error', (err) => {
+      response.body.pipeTo(new WritableStream({
+        write(chunk) {
+          res.write(chunk);
+        },
+        close() {
+          res.end();
+        },
+        abort(err) {
+          console.error(`Stream error: ${err.message}`);
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end(`Stream error: ${err.message}`);
+        }
+      }));
+    } catch (err) {
       console.error(`Stream error: ${err.message}`);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end(`Stream error: ${err.message}`);
-    });
+    }
   } else {
     console.log('Redirecting to bradio.dev');
     res.writeHead(302, { 'Location': 'https://bradio.dev' });
