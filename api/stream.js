@@ -7,19 +7,18 @@ module.exports = (req, res) => {
     let streamUrl = req.query.url;
     if (!streamUrl) {
       console.log('No stream URL provided');
-      res.status(400).end('No stream URL provided');
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('No stream URL provided');
       return;
     }
 
     if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
     console.log(`Requesting stream: ${streamUrl}`);
-    res.set({
-      'Content-Type': 'audio/aac',
-      'Access-Control-Allow-Origin': 'https://bradio.dev',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    });
+    res.setHeader('Content-Type', 'audio/aac');
+    res.setHeader('Access-Control-Allow-Origin', 'https://bradio.dev');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
     const stream = request({
       url: streamUrl,
@@ -36,10 +35,12 @@ module.exports = (req, res) => {
 
     stream.on('error', (err) => {
       console.error(`Stream error: ${err.message}`);
-      res.status(500).end(`Stream error: ${err.message}`);
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end(`Stream error: ${err.message}`);
     });
   } else {
     console.log('Redirecting to bradio.dev');
-    res.redirect(302, 'https://bradio.dev');
+    res.writeHead(302, { 'Location': 'https://bradio.dev' });
+    res.end();
   }
 };
