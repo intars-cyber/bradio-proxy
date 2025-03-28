@@ -1,15 +1,22 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/stream.js",
-      "use": "@vercel/node@2.15.10"
+  "functions": {
+    "api/stream.js": {
+      "memory": 128,
+      "maxDuration": 10
     }
-  ],
+  },
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/stream",
       "dest": "/api/stream.js"
+    },
+    {
+      "src": "/(.*)",
+      "status": 302,
+      "headers": {
+        "Location": "https://bradio.dev"
+      }
     }
   ]
 }
