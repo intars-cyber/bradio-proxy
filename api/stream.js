@@ -9,6 +9,12 @@ module.exports = (req, res) => {
     if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
     console.log(`Requesting stream: ${streamUrl}`);
+    res.set({
+      'Content-Type': 'audio/aac',
+      'Access-Control-Allow-Origin': 'https://bradio.dev',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
     const stream = request({
       url: streamUrl,
       headers: { 'User-Agent': 'BRadio-App' },
@@ -18,22 +24,12 @@ module.exports = (req, res) => {
 
     stream.on('response', (resp) => {
       console.log(`Stream response: ${resp.statusCode}, Content-Type: ${resp.headers['content-type']}`);
-      const rawContentType = resp.headers['content-type'];
-      let contentType = rawContentType ? rawContentType.toLowerCase() : 'audio/mpeg';
-      if (streamUrl.endsWith('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
-      else if (streamUrl.endsWith('.aac')) contentType = 'audio/aac';
-      else if (streamUrl.endsWith('.mp3')) contentType = 'audio/mpeg';
-      res.set({
-        'Content-Type': contentType,
-        'Access-Control-Allow-Origin': 'https://bradio.dev',
-        'Cache-Control': 'no-cache'
-      });
-      stream.pipe(res);
+      stream.pipe(res, { end: true });
     });
 
     stream.on('error', (err) => {
       console.error(`Stream error: ${err.message}`);
-      res.status(500).send(`Stream error: ${err.message}`);
+      res.status(500).end(`Stream error: ${err.message}`);
     });
   } else {
     res.redirect(302, 'https://bradio.dev');
