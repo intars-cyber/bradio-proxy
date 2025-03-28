@@ -4,7 +4,10 @@ module.exports = (req, res) => {
   const url = new URL(`http://localhost${req.url}`);
   if (url.pathname === '/api/stream') {
     let streamUrl = req.query.url;
-    if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
+    if (!streamUrl) {
+      res.status(400).end('No stream URL provided');
+      return;
+    }
 
     if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
@@ -15,6 +18,7 @@ module.exports = (req, res) => {
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive'
     });
+
     const stream = request({
       url: streamUrl,
       headers: { 'User-Agent': 'BRadio-App' },
