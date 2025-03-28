@@ -1,20 +1,60 @@
-const request = require('request');
+module.exports = async (req, res) => {
+  console.log(`Request received: ${req.url}`);
+  const url = new URL(`http://localhost${req.url}`);
+  if (url.pathname === '/api/stream') {
+    let streamUrl = req.query.url;
+    if (!streamUrl) {
+      console.log('No stream URL provided');
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('No stream URL provided');
+      return;
+    }
 
-module.exports = (req, res) => {
-  const streamUrl = req.query.url;
-  if (!streamUrl) return res.status(400).send('Missing stream URL');
-  request({ url: streamUrl, headers: { 'User-Agent': 'BRadio-App' }, followRedirect: true, timeout: 10000 })
-    .on('response', (resp) => {
-      let contentType = resp.headers['content-type']?.toLowerCase() || 'audio/mpeg';
-      if (streamUrl.endsWith('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
-      else if (streamUrl.endsWith('.aac')) contentType = 'audio/aac';
-      else if (streamUrl.endsWith('.mp3')) contentType = 'audio/mpeg';
-      res.set({
-        'Content-Type': contentType,
-        'Access-Control-Allow-Origin': 'https://bradio.dev',
-        'Cache-Control': 'no-cache'
+    if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
+
+    console.log(`Requesting stream: ${streamUrl}`);
+    res.writeHead(200, {
+      'Content-Type': 'audio/aac',
+      'Access-Control-Allow-Origin': 'https://bradio.dev',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    try {
+      const response = await fetch(streamUrl, {
+        headers: { 'User-Agent': 'BRadio-App' },
+        redirect: 'follow'
       });
-    })
-    .on('error', (err) => res.status(500).send(`Stream error: ${err.message}`))
-    .pipe(res);
+
+      if (!response.ok) {
+        console.error(`Upstream error: ${response.status}`);
+        res.writeHead(response.status, { 'Content-Type': 'text/plain' });
+        res.end(`Upstream error: ${response.status}`);
+        return;
+      }
+
+      console.log(`Stream response: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
+      response.body.pipeTo(new WritableStream({
+        write(chunk) {
+          res.write(chunk);
+        },
+        close() {
+          res.end();
+        },
+        abort(err) {
+          console.error(`Stream error: ${err.message}`);
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end(`Stream error: ${err.message}`);
+        }
+      }));
+    } catch (err) {
+      console.error(`Fetch error: ${err.message}`);
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end(`Fetch error: ${err.message}`);
+    }
+  } else {
+    console.log('Redirecting to bradio.dev');
+    res.writeHead(302, { 'Location': 'https://bradio.dev' });
+    res.end();
+  }
 };
