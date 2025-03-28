@@ -15,25 +15,22 @@ app.get('/proxy/stream', (req, res) => {
   if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
   console.log(`Requesting stream: ${streamUrl}`);
+  // Set headers immediately
+  res.set({
+    'Content-Type': 'audio/aac', // Default to AAC for this stream
+    'Access-Control-Allow-Origin': 'https://bradio.dev',
+    'Cache-Control': 'no-cache'
+  });
+
   const stream = request({
     url: streamUrl,
     headers: { 'User-Agent': 'BRadio-App' },
     followRedirect: true,
-    timeout: 10000 // 10s for safety
+    timeout: 5000
   });
 
   stream.on('response', (resp) => {
     console.log(`Stream response: ${resp.statusCode}, Content-Type: ${resp.headers['content-type']}`);
-    const rawContentType = resp.headers['content-type'];
-    let contentType = rawContentType ? rawContentType.toLowerCase() : 'audio/mpeg';
-    if (streamUrl.endsWith('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
-    else if (streamUrl.endsWith('.aac')) contentType = 'audio/aac';
-    else if (streamUrl.endsWith('.mp3')) contentType = 'audio/mpeg';
-    res.set({
-      'Content-Type': contentType,
-      'Access-Control-Allow-Origin': 'https://bradio.dev',
-      'Cache-Control': 'no-cache'
-    });
     console.log('Piping stream to response');
     stream.pipe(res);
   });
