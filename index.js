@@ -4,17 +4,14 @@ const app = express();
 
 app.get('/stream', (req, res) => {
   let streamUrl = req.query.url;
-  if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
+  if (!streamUrl) {
+    console.log('No stream URL provided');
+    return res.redirect(302, 'https://bradio.dev');
+  }
 
   if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
   console.log(`Requesting stream: ${streamUrl}`);
-  res.set({
-    'Content-Type': 'audio/aac',
-    'Access-Control-Allow-Origin': 'https://bradio.dev',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
-  });
 
   const stream = request({
     url: streamUrl,
@@ -25,6 +22,25 @@ app.get('/stream', (req, res) => {
 
   stream.on('response', (resp) => {
     console.log(`Stream response: ${resp.statusCode}, Content-Type: ${resp.headers['content-type']}`);
+    const upstreamCors = resp.headers['access-control-allow-origin'];
+    console.log(`Upstream CORS: ${upstreamCors}`);
+
+    // Smart CORS
+    let corsHeader = 'https://bradio.dev';
+    if (upstreamCors && (upstreamCors === '*' || upstreamCors.includes('https://bradio.dev'))) {
+      console.log('Upstream CORS sufficient, using it');
+      corsHeader = upstreamCors;
+    } else {
+      console.log('Upstream CORS missing or restrictive, enforcing https://bradio.dev');
+    }
+
+    res.set({
+      'Content-Type': 'audio/aac',
+      'Access-Control-Allow-Origin': corsHeader,
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
     stream.pipe(res, { end: true });
   });
 
