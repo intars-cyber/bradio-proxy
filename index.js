@@ -2,13 +2,12 @@ const express = require('express');
 const request = require('request');
 const app = express();
 
-// Middleware for /proxy subpath
 app.use('/proxy', (req, res, next) => {
+  console.log('Middleware hit for /proxy');
   if (req.path === '/stream') next();
   else res.redirect(302, 'https://bradio.dev');
 });
 
-// Stream endpoint at /proxy/stream
 app.get('/proxy/stream', (req, res) => {
   let streamUrl = req.query.url;
   if (!streamUrl) return res.redirect(302, 'https://bradio.dev');
@@ -20,7 +19,7 @@ app.get('/proxy/stream', (req, res) => {
     url: streamUrl,
     headers: { 'User-Agent': 'BRadio-App' },
     followRedirect: true,
-    timeout: 5000
+    timeout: 10000 // 10s for safety
   });
 
   stream.on('response', (resp) => {
@@ -35,6 +34,7 @@ app.get('/proxy/stream', (req, res) => {
       'Access-Control-Allow-Origin': 'https://bradio.dev',
       'Cache-Control': 'no-cache'
     });
+    console.log('Piping stream to response');
     stream.pipe(res);
   });
 
@@ -44,11 +44,10 @@ app.get('/proxy/stream', (req, res) => {
   });
 });
 
-// Root fallback
 app.get('/', (req, res) => {
+  console.log('Root endpoint hit');
   res.send('BRadio Proxy Running - Use /proxy/stream');
 });
 
-// Use process.env.PORT for Koyeb (set to 8000 internally)
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server running on port ${port}`));
