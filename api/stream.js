@@ -1,23 +1,20 @@
+const request = require('request');
+
 module.exports = (req, res) => {
-  console.log(`Request received: ${req.url}`);
-  const url = new URL(`http://localhost${req.url}`);
-  if (url.pathname === '/api/stream') {
-    let streamUrl = req.query.url;
-    if (!streamUrl) {
-      console.log('No stream URL provided');
-      res.writeHead(400, { 'Content-Type': 'text/plain' });
-      res.end('No stream URL provided');
-      return;
-    }
-
-    if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
-
-    console.log(`Redirecting to stream: ${streamUrl}`);
-    res.writeHead(302, { 'Location': streamUrl });
-    res.end();
-  } else {
-    console.log('Redirecting to bradio.dev');
-    res.writeHead(302, { 'Location': 'https://bradio.dev' });
-    res.end();
-  }
+  const streamUrl = req.query.url;
+  if (!streamUrl) return res.status(400).send('Missing stream URL');
+  request({ url: streamUrl, headers: { 'User-Agent': 'BRadio-App' }, followRedirect: true, timeout: 10000 })
+    .on('response', (resp) => {
+      let contentType = resp.headers['content-type']?.toLowerCase() || 'audio/mpeg';
+      if (streamUrl.endsWith('.m3u8')) contentType = 'application/vnd.apple.mpegurl';
+      else if (streamUrl.endsWith('.aac')) contentType = 'audio/aac';
+      else if (streamUrl.endsWith('.mp3')) contentType = 'audio/mpeg';
+      res.set({
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': 'https://bradio.dev',
+        'Cache-Control': 'no-cache'
+      });
+    })
+    .on('error', (err) => res.status(500).send(`Stream error: ${err.message}`))
+    .pipe(res);
 };
