@@ -15,11 +15,12 @@ app.get('/proxy/stream', (req, res) => {
   if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
   console.log(`Requesting stream: ${streamUrl}`);
-  // Set headers immediately
+  // Set headers immediately to start response
   res.set({
-    'Content-Type': 'audio/aac', // Default to AAC for this stream
+    'Content-Type': 'audio/aac',
     'Access-Control-Allow-Origin': 'https://bradio.dev',
-    'Cache-Control': 'no-cache'
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive' // Ensure streaming
   });
 
   const stream = request({
@@ -32,12 +33,12 @@ app.get('/proxy/stream', (req, res) => {
   stream.on('response', (resp) => {
     console.log(`Stream response: ${resp.statusCode}, Content-Type: ${resp.headers['content-type']}`);
     console.log('Piping stream to response');
-    stream.pipe(res);
+    stream.pipe(res, { end: true }); // Explicitly end response with stream
   });
 
   stream.on('error', (err) => {
     console.error(`Stream error: ${err.message}`);
-    res.status(500).send(`Stream error: ${err.message}`);
+    res.status(500).end(`Stream error: ${err.message}`);
   });
 });
 
