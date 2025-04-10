@@ -4,7 +4,6 @@ module.exports = async (req, res) => {
   if (url.pathname === '/api/stream') {
     let streamUrl = req.query.url;
     if (!streamUrl) {
-      console.log('No stream URL provided');
       res.writeHead(400, { 'Content-Type': 'text/plain' });
       res.end('No stream URL provided');
       return;
@@ -12,63 +11,74 @@ module.exports = async (req, res) => {
 
     if (!streamUrl.match(/^https?:\/\//)) streamUrl = `https://${streamUrl}`;
 
-    console.log(`Requesting stream: ${streamUrl}`);
-
     try {
-      const response = await fetch(streamUrl, {
+      const headResponse = await fetch(streamUrl, {
+        method: 'HEAD',
         headers: { 'User-Agent': 'BRadio-App' },
         redirect: 'follow',
-        signal: AbortSignal.timeout(55000) // 55s for Fluid Compute
+        signal: AbortSignal.timeout(5000)
       });
 
-      if (!response.ok) {
-        console.error(`Upstream error: ${response.status}`);
-        res.writeHead(response.status, { 'Content-Type': 'text/plain' });
-        res.end(`Upstream error: ${response.status}`);
+      if (!headResponse.ok) {
+        res.writeHead(headResponse.status, { 'Content-Type': 'text/plain' });
+        res.end(`Upstream error: ${headResponse.status}`);
         return;
       }
 
-      const upstreamCors = response.headers.get('Access-Control-Allow-Origin');
-      console.log(`Upstream CORS: ${upstreamCors}`);
+      const upstreamCors = headResponse.headers.get('Access-Control-Allow-Origin');
+      const corsAllowed = upstreamCors === '*' || upstreamCors?.includes('https://bradio.dev');
+      let corsHeader = corsAllowed ? upstreamCors : 'https://bradio.dev';
 
-      // Smart CORS: Use upstream if it includes bradio.dev, else enforce bradio.dev
-      let corsHeader = 'https://bradio.dev';
-      if (upstreamCors && (upstreamCors === '*' || upstreamCors.includes('https://bradio.dev'))) {
-        console.log('Upstream CORS sufficient, using it');
-        corsHeader = upstreamCors;
+      if (corsAllowed) {
+        // Redirect if CORS is already sufficient
+        res.writeHead(302, {
+          'Location': streamUrl,
+          'Access-Control-Allow-Origin': corsHeader,
+          'Cache-Control': 'no-cache'
+        });
+        res.end();
       } else {
-        console.log('Upstream CORS missing or restrictive, enforcing https://bradio.dev');
-      }
+        // Fallback to piping if CORS is missing
+        const streamResponse = await fetch(streamUrl, {
+          headers: { 'User-Agent': 'BRadio-App' },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(50000) // 50s for Fluid Compute
+        });
 
-      res.writeHead(200, {
-        'Content-Type': 'audio/aac',
-        'Access-Control-Allow-Origin': corsHeader,
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      });
-
-      console.log(`Stream response: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
-      response.body.pipeTo(new WritableStream({
-        write(chunk) {
-          res.write(chunk);
-        },
-        close() {
-          res.end();
-        },
-        abort(err) {
-          console.error(`Stream error: ${err.message}`);
-          res.writeHead(500, { 'Content-Type': 'text/plain' });
-          res.end(`Stream error: ${err.message}`);
+        if (!streamResponse.ok) {
+          res.writeHead(streamResponse.status, { 'Content-Type': 'text/plain' });
+          res.end(`Upstream error: ${streamResponse.status}`);
+          return;
         }
-      }));
+
+        res.writeHead(200, {
+          'Content-Type': streamResponse.headers.get('content-type') || 'audio/aac',
+          'Access-Control-Allow-Origin': corsHeader,
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        });
+
+        streamResponse.body.pipeTo(new WritableStream({
+          write(chunk) {
+            res.write(chunk);
+          },
+          close() {
+            res.end();
+          },
+          abort(err) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end(`Stream error: ${err.message}`);
+          }
+        }));
+      }
     } catch (err) {
-      console.error(`Fetch error: ${err.message}`);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end(`Fetch error: ${err.message}`);
     }
   } else {
-    console.log('Redirecting to bradio.dev');
     res.writeHead(302, { 'Location': 'https://bradio.dev' });
     res.end();
   }
 };
+
+export const config = { runtime: "edge" };
